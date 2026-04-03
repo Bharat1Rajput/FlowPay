@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "github.com/Bharat1Rajput/flowpay/proto/order";
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+message OrderItem {
+  string name = 1;
+  int32 quantity = 2;
+  int64 unit_price_paise = 3;
+  int64 total_paise = 4;
+}
+
+message CreateOrderRequest {
+  string user_id = 1;
+  string delivery_address = 2;
+  string notes = 3;
+  repeated OrderItem items = 4;
+}
+
+message CreateOrderResponse {
+  string order_id = 1;
+  string status = 2;
+  int64 total_paise = 3;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  string order_id = 1;
+  string user_id = 2;
+  string status = 3;
+  int64 total_paise = 4;
+  string currency = 5;
+  string delivery_address = 6;
+  repeated OrderItem items = 7;
+  string created_at = 8;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+  string requesting_user_id = 2;
+}
+
+message CancelOrderResponse {
+  bool success = 1;
+  string message = 2;
+}
