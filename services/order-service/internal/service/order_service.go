@@ -28,6 +28,7 @@ type CreateOrderInput struct {
 func (s *OrderService) CreateOrder(ctx context.Context, in CreateOrderInput) (*model.Order, error) {
 
 	// 1. Validation
+	fmt.Println("items : ", in.Items)
 	if len(in.Items) == 0 {
 		return nil, fmt.Errorf("items cannot be empty")
 	}

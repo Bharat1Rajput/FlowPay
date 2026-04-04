@@ -1,25 +1,43 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
+	"log"
+	"net"
 
-	"github.com/Bharat1Rajput/flowpay/services/order-service/internal/model"
-	"github.com/google/uuid"
+	_ "github.com/lib/pq"
+	"google.golang.org/grpc"
+
+	pb "github.com/Bharat1Rajput/flowpay/proto/order"
+
+	"github.com/Bharat1Rajput/flowpay/services/order-service/internal/handler"
+	"github.com/Bharat1Rajput/flowpay/services/order-service/internal/repository"
+	"github.com/Bharat1Rajput/flowpay/services/order-service/internal/service"
 )
 
 func main() {
-	orderID := uuid.New()
 
-	item := model.NewOrderItem(orderID, "Pizza", 2, 5000)
-
-	order := model.Order{
-		ID:     orderID,
-		UserID: uuid.New(),
-		Status: model.StatusPending,
-		Items:  []model.OrderItem{item},
+	// Connect DB
+	db, err := sql.Open("postgres", "postgres://postgres:postgres@localhost:5432/orders_db?sslmode=disable")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	order.ComputeTotal()
+	// service, repo, handler wiring
+	repo := repository.NewPostgresOrderRepo(db)
+	svc := service.NewOrderService(repo)
+	h := handler.NewOrderHandler(svc)
 
-	fmt.Println("Total:", order.TotalAmount)
+	// gRPC server
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server := grpc.NewServer()
+
+	pb.RegisterOrderServiceServer(server, h)
+
+	log.Println("Order Service running on :50051")
+	log.Fatal(server.Serve(lis))
 }

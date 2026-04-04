@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	pb "github.com/Bharat1Rajput/flowpay/proto/order"
@@ -26,17 +27,50 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserID          string `json:"user_id"`
 		DeliveryAddress string `json:"delivery_address"`
+		Items           []struct {
+			Name      string `json:"name"`
+			Quantity  int32  `json:"quantity"`
+			UnitPrice int64  `json:"unit_price"`
+		} `json:"items"`
+		Notes string `json:"notes"`
 	}
 
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	// ✅ Decode request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
+	// 🔍 Debug (VERY IMPORTANT during development)
+	fmt.Println("HTTP Items:", len(req.Items))
+
+	//
+	if len(req.Items) == 0 {
+		http.Error(w, "items cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	// Convert HTTP → gRPC (CRITICAL STEP)
+	var items []*pb.OrderItem
+
+	for _, i := range req.Items {
+		items = append(items, &pb.OrderItem{
+			Name:           i.Name,
+			Quantity:       i.Quantity,
+			UnitPricePaise: i.UnitPrice,
+		})
+	}
+
+	// gRPC call with FULL mapping
 	resp, err := h.orderClient.CreateOrder(r.Context(), &pb.CreateOrderRequest{
 		UserId:          req.UserID,
 		DeliveryAddress: req.DeliveryAddress,
+		Notes:           req.Notes,
+		Items:           items, // 🔥 FIXED
 	})
 
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -51,8 +85,22 @@ func (h *Handler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 		Amount         int64  `json:"amount"`
 	}
 
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	// ✅ Decode
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
+	// 🔍 Debug
+	fmt.Println("Processing payment for order:", req.OrderID)
+
+	// ❌ Basic validation
+	if req.OrderID == "" || req.IdempotencyKey == "" || req.Amount <= 0 {
+		http.Error(w, "invalid payment request", http.StatusBadRequest)
+		return
+	}
+
+	// ✅ gRPC call
 	resp, err := h.paymentClient.ProcessPayment(r.Context(), &pb2.ProcessPaymentRequest{
 		OrderId:        req.OrderID,
 		IdempotencyKey: req.IdempotencyKey,
@@ -61,7 +109,7 @@ func (h *Handler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
