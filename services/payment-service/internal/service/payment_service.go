@@ -7,16 +7,18 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/Bharat1Rajput/flowpay/services/payment-service/internal/kafka"
 	"github.com/Bharat1Rajput/flowpay/services/payment-service/internal/model"
 	"github.com/Bharat1Rajput/flowpay/services/payment-service/internal/repository"
 )
 
 type PaymentService struct {
-	repo repository.PaymentRepository
+	repo     repository.PaymentRepository
+	producer kafka.EventProducer
 }
 
-func NewPaymentService(repo repository.PaymentRepository) *PaymentService {
-	return &PaymentService{repo: repo}
+func NewPaymentService(repo repository.PaymentRepository, producer kafka.EventProducer) *PaymentService {
+	return &PaymentService{repo: repo, producer: producer}
 }
 
 type ProcessPaymentInput struct {
@@ -78,6 +80,9 @@ func (s *PaymentService) ProcessPayment(ctx context.Context, in ProcessPaymentIn
 
 	payment.Status = model.StatusSuccess
 	payment.GatewayRef = gatewayRef
-
+	// Step 7: Publish event
+	if err := s.producer.PublishPaymentEvent(ctx, payment); err != nil {
+		// log but DO NOT fail request
+	}
 	return payment, nil
 }
