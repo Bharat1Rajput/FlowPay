@@ -83,6 +83,10 @@ func (s *PaymentService) ProcessPayment(ctx context.Context, in ProcessPaymentIn
 	// Step 7: Publish event
 	if err := s.producer.PublishPaymentEvent(ctx, payment); err != nil {
 		// log but DO NOT fail request
+		fmt.Printf("failed to publish event: %v\n", err)
 	}
 	return payment, nil
+}
+func (s *PaymentService) GetPayment(ctx context.Context, id uuid.UUID) (*model.Payment, error) {
+	return s.repo.GetByID(ctx, id)
 }
