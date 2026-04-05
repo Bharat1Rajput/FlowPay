@@ -13,8 +13,8 @@ import (
 func main() {
 
 	// gRPC connections
-	orderConn, _ := grpc.Dial("localhost:50051", grpc.WithInsecure())
-	paymentConn, _ := grpc.Dial("localhost:50052", grpc.WithInsecure())
+	orderConn, _ := grpc.Dial("order-service:50051", grpc.WithInsecure())
+	paymentConn, _ := grpc.Dial("payment-service:50052", grpc.WithInsecure())
 
 	orderClient := client.NewOrderClient(orderConn)
 	paymentClient := client.NewPaymentClient(paymentConn)
