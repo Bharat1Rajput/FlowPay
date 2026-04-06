@@ -90,3 +90,4 @@ func (s *PaymentService) ProcessPayment(ctx context.Context, in ProcessPaymentIn
 func (s *PaymentService) GetPayment(ctx context.Context, id uuid.UUID) (*model.Payment, error) {
 	return s.repo.GetByID(ctx, id)
 }
+ 

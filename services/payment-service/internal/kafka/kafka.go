@@ -61,7 +61,7 @@ func (k *KafkaProducer) PublishPaymentEvent(ctx context.Context, payment *model.
 	data, err := json.Marshal(event)
 	if err != nil {
 		return err
-	}
+	} 
 
 	msg := &sarama.ProducerMessage{
 		Topic: k.topic,

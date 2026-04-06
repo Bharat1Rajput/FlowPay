@@ -23,6 +23,7 @@ func main() {
 
 	http.HandleFunc("/orders", h.CreateOrder)
 	http.HandleFunc("/payments", h.ProcessPayment)
+	http.HandleFunc("/orders/", h.GetOrder) // for GET /orders/{id}
 
 	log.Println("API Gateway running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

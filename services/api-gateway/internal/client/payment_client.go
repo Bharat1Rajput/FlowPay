@@ -21,3 +21,7 @@ func NewPaymentClient(conn *grpc.ClientConn) *PaymentClient {
 func (c *PaymentClient) ProcessPayment(ctx context.Context, req *pb.ProcessPaymentRequest) (*pb.ProcessPaymentResponse, error) {
 	return c.client.ProcessPayment(ctx, req)
 }
+
+func (c *PaymentClient) GetPayment(ctx context.Context, req *pb.GetPaymentRequest) (*pb.GetPaymentResponse, error) {
+	return c.client.GetPayment(ctx, req)
+}

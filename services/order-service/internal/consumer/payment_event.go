@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"log"
 
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
@@ -28,6 +29,10 @@ func NewPaymentConsumer(svc *service.OrderService) *PaymentConsumer {
 	return &PaymentConsumer{svc: svc}
 }
 
+// REQUIRED for sarama
+func (c *PaymentConsumer) Setup(sarama.ConsumerGroupSession) error   { return nil }
+func (c *PaymentConsumer) Cleanup(sarama.ConsumerGroupSession) error { return nil }
+
 func (c *PaymentConsumer) ConsumeClaim(
 	session sarama.ConsumerGroupSession,
 	claim sarama.ConsumerGroupClaim,
@@ -35,42 +40,47 @@ func (c *PaymentConsumer) ConsumeClaim(
 
 	for msg := range claim.Messages() {
 
+		log.Println("received message:", string(msg.Value))
+
 		var event PaymentEvent
 
-		// 1. Parse JSON
+		// parse JSON
 		if err := json.Unmarshal(msg.Value, &event); err != nil {
-			// skip bad message
+			log.Println("invalid message:", err)
 			session.MarkMessage(msg, "")
 			continue
 		}
 
-		// 2. Handle event
-		c.handleEvent(session.Context(), event)
+		// process event
+		if err := c.handleEvent(session.Context(), event); err != nil {
+			log.Println("error processing event:", err)
+			continue
+		}
 
-		// 3. Mark as processed
 		session.MarkMessage(msg, "")
 	}
 
 	return nil
 }
 
-func (c *PaymentConsumer) handleEvent(ctx context.Context, event PaymentEvent) {
+func (c *PaymentConsumer) handleEvent(ctx context.Context, event PaymentEvent) error {
 
 	orderID, err := uuid.Parse(event.Payload.OrderID)
 	if err != nil {
-		return
+		return err
 	}
+	log.Printf("processing event %s for order %s\n", event.EventType, orderID)
 
 	switch event.EventType {
 
 	case "payment.succeeded":
-		_ = c.svc.ConfirmFromPayment(ctx, orderID)
+		return c.svc.ConfirmFromPayment(ctx, orderID)
 
 	case "payment.failed":
-		_ = c.svc.CancelOrder(ctx, orderID, uuid.Nil) // system cancel
+		return c.svc.CancelFromPayment(ctx, orderID)
 
 	default:
-		// ignore unknown events
-
+		log.Println("unknown event:", event.EventType)
+		return nil
 	}
 }

@@ -77,6 +77,28 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL
+	id := r.URL.Path[len("/orders/"):]
+	resp, err := h.orderClient.GetOrder(r.Context(), &pb.GetOrderRequest{OrderId: id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) CancelOrder(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL
+	id := r.URL.Path[len("/orders/"):]
+	resp, err := h.orderClient.CancelOrder(r.Context(), &pb.CancelOrderRequest{OrderId: id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
 func (h *Handler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
@@ -85,22 +107,22 @@ func (h *Handler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 		Amount         int64  `json:"amount"`
 	}
 
-	// ✅ Decode
+	//  Decode
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// 🔍 Debug
+	//  Debug
 	fmt.Println("Processing payment for order:", req.OrderID)
 
-	// ❌ Basic validation
+	//  Basic validation
 	if req.OrderID == "" || req.IdempotencyKey == "" || req.Amount <= 0 {
 		http.Error(w, "invalid payment request", http.StatusBadRequest)
 		return
 	}
 
-	// ✅ gRPC call
+	//  gRPC call
 	resp, err := h.paymentClient.ProcessPayment(r.Context(), &pb2.ProcessPaymentRequest{
 		OrderId:        req.OrderID,
 		IdempotencyKey: req.IdempotencyKey,

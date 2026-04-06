@@ -107,3 +107,24 @@ func (s *OrderService) ConfirmFromPayment(ctx context.Context, orderID uuid.UUID
 
 	return s.repo.UpdateStatus(ctx, orderID, order.Status, model.StatusConfirmed)
 }
+
+func (s *OrderService) CancelFromPayment(ctx context.Context, orderID uuid.UUID) error {
+
+	order, err := s.repo.GetByID(ctx, orderID)
+	if err != nil {
+		return err
+	}
+
+	// Idempotency (critical for Kafka retries)
+	if order.Status == model.StatusCancelled {
+		return nil
+	}
+
+	// Validate transition
+	if err := statemachine.CanTransition(order.Status, model.StatusCancelled); err != nil {
+		return err
+	}
+
+	// Update with optimistic locking
+	return s.repo.UpdateStatus(ctx, orderID, order.Status, model.StatusCancelled)
+}
