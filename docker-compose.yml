@@ -69,6 +69,19 @@ services:
     ports:
       - "50051:50051"
 
+  notification-service:
+    build:
+     context: .
+     dockerfile: services/notification-service/Dockerfile
+    container_name: notification-service
+    restart: always
+    depends_on:
+     kafka:
+       condition: service_healthy
+    environment:
+      KAFKA_BROKER: kafka:9092
+  
+
   payment-service:
     build:
       context: .

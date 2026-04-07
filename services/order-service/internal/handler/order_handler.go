@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 
 	pb "github.com/Bharat1Rajput/flowpay/proto/order"
 	"github.com/google/uuid"
@@ -100,10 +101,11 @@ func (h *OrderHandler) CancelOrder(
 ) (*pb.CancelOrderResponse, error) {
 
 	orderID, err := uuid.Parse(req.OrderId)
+	log.Println("Cancelling order with ID:", orderID)
 	if err != nil {
 		return nil, err
 	}
-
+  
 	userID, err := uuid.Parse(req.RequestingUserId)
 	if err != nil {
 		return nil, err

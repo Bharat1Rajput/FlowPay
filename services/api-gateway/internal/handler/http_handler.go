@@ -3,11 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	pb "github.com/Bharat1Rajput/flowpay/proto/order"
 	pb2 "github.com/Bharat1Rajput/flowpay/proto/payment"
 	"github.com/Bharat1Rajput/flowpay/services/api-gateway/internal/client"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -79,7 +81,8 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL
-	id := r.URL.Path[len("/orders/"):]
+	id := chi.URLParam(r, "id")
+
 	resp, err := h.orderClient.GetOrder(r.Context(), &pb.GetOrderRequest{OrderId: id})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -90,7 +93,8 @@ func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from URL
-	id := r.URL.Path[len("/orders/"):]
+	id := chi.URLParam(r, "id")
+	log.Println("Cancelling order with ID:", id)
 	resp, err := h.orderClient.CancelOrder(r.Context(), &pb.CancelOrderRequest{OrderId: id})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -136,4 +140,17 @@ func (h *Handler) ProcessPayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) GetPayment(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL
+	id := chi.URLParam(r, "id")
+
+	resp, err := h.paymentClient.GetPayment(r.Context(), &pb2.GetPaymentRequest{PaymentId: id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(resp)
+
 }

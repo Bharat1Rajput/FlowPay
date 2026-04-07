@@ -3,11 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
-
-	"google.golang.org/grpc"
-
 	"github.com/Bharat1Rajput/flowpay/services/api-gateway/internal/client"
 	"github.com/Bharat1Rajput/flowpay/services/api-gateway/internal/handler"
+	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -21,10 +20,13 @@ func main() {
 
 	h := handler.NewHandler(orderClient, paymentClient)
 
-	http.HandleFunc("/orders", h.CreateOrder)
-	http.HandleFunc("/payments", h.ProcessPayment)
-	http.HandleFunc("/orders/", h.GetOrder) // for GET /orders/{id}
-
+	r := chi.NewRouter()  
+	r.Post("/orders", h.CreateOrder)
+	r.Post("/payments", h.ProcessPayment)
+	r.Get("/orders/{id}", h.GetOrder)
+	r.Get("/payments/{id}", h.GetPayment)
+	r.Post("/orders/cancel/{id}", h.CancelOrder)
+	
 	log.Println("API Gateway running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

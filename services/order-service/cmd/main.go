@@ -63,8 +63,21 @@ func main() {
 		log.Fatal("failed to connect to kafka:", err)
 	}
 
+	// ---------------- DLQ Producer ----------------
+	producerConfig := sarama.NewConfig()
+	producerConfig.Producer.Return.Successes = true
+
+	producer, err := sarama.NewSyncProducer([]string{broker}, producerConfig)
+	if err != nil {
+		log.Fatal("failed to create kafka producer:", err)
+	}
+
+	// DLQ + Retry
+	retryHandler := consumer.NewRetryHandler()
+	dlqProducer := consumer.NewDLQProducer(producer, "payments.DLQ")
 	// ---------------- Kafka Consumer ----------------
-	paymentConsumer := consumer.NewPaymentConsumer(orderService)
+
+	paymentConsumer := consumer.NewPaymentConsumer(orderService, retryHandler, dlqProducer)
 
 	// ---------------- Start Consumer ----------------
 	go func() {

@@ -22,11 +22,13 @@ type Payload struct {
 }
 
 type PaymentConsumer struct {
-	svc *service.OrderService
+	svc   *service.OrderService
+	retry *RetryHandler
+	dlq   *DLQProducer
 }
 
-func NewPaymentConsumer(svc *service.OrderService) *PaymentConsumer {
-	return &PaymentConsumer{svc: svc}
+func NewPaymentConsumer(svc *service.OrderService, retry *RetryHandler, dlq *DLQProducer) *PaymentConsumer {
+	return &PaymentConsumer{svc: svc, retry: retry, dlq: dlq}
 }
 
 // REQUIRED for sarama
@@ -52,8 +54,17 @@ func (c *PaymentConsumer) ConsumeClaim(
 		}
 
 		// process event
-		if err := c.handleEvent(session.Context(), event); err != nil {
-			log.Println("error processing event:", err)
+		err := c.retry.Execute(session.Context(), func() error {
+			return c.handleEvent(session.Context(), event)
+		})
+
+		if err != nil {
+			log.Println("failed after retries, sending to DLQ:", err)
+
+			if dlqErr := c.dlq.Send(session.Context(), msg, err.Error()); dlqErr != nil {
+				log.Println("failed to send to DLQ:", dlqErr)
+			}
+
 			continue
 		}
 
